@@ -257,7 +257,7 @@ class CleanerThread(Thread):
                     unlink(testfile)
             sleep(self.delay)
 
-pid_file = '/tmp/aeroo-docs.pid'
+pid_file = '/var/run/aeroo-docs.pid'
 def start_daemon(args):
     logger.info('Starting Aeroo DOCS process...')
     #### Prepare spool directory
@@ -281,14 +281,18 @@ def start_daemon(args):
 def stop_daemon(args):
     try:
         with open(pid_file, "r") as tmpfile:
-            pid = int(tmpfile.read())
+            try:
+                pid = int(tmpfile.read())
+            except ValueError:
+                logger.warning('Pid file is empty or corrupted! Nothing to do...')
+                remove(pid_file)
+                return None
     except FileNotFoundError as e:
         logger.warning('Process allready stopped. Nothing to do...')
         return None
     tries = 0
+    logger.info('Stopping Aeroo DOCS process...')
     while tries < 10:
-        if tries == 0:
-            logger.info('Stopping Aeroo DOCS process...')
         try:
             kill(pid, SIGQUIT)
         except ProcessLookupError as e:
