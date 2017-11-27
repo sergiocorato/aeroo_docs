@@ -195,6 +195,33 @@ class DocumentConverter:
         if filter_name == 'Text - txt - csv (StarCalc)':
             properties.update({"FilterOptions": CSVFilterOptions})
         props = self._toProperties(**properties)
+        # Copyright (C) 2017 Sergio Corato
+        # for odt report, format to the end of the last page a footer table
+        if self.document.Identifier == 'com.sun.star.text.TextDocument':
+            if self.document.TextTables.hasByName('FooterTable'):
+                cursor = self.document.CurrentController.ViewCursor
+                # move to last page and get max number of pages
+                cursor.jumpToLastPage()
+                max_pg_number = cursor.getPage()
+                table = self.document.TextTables.getByName('FooterTable')
+                proceed = True
+                i = 0
+                # insert row until the pages become 1 more
+                while proceed:
+                    rows = table.getRows()
+                    rows.insertByIndex(0, 1)
+                    i += 1
+                    cursor.jumpToLastPage()
+                    if cursor.getPage() > max_pg_number:
+                        proceed = False
+                # for the max number of inserted row, remove until pages become
+                # the same as original
+                for n in range(0, i):
+                    if cursor.getPage() > max_pg_number:
+                        rows.removeByIndex(0, 1)
+                    else:
+                        break
+        #
         try:
             #url = uno.systemPathToFileUrl(path) #when storing to filesystem
             self.document.storeToURL('private:stream', props)
